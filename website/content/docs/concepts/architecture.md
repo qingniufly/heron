@@ -37,27 +37,8 @@ Stream Processing at Scale](http://dl.acm.org/citation.cfm?id=2742788) paper.
 
 ## Heron Design Goals
 
-* **Isolation** --- [Topologies](../topologies) should be process based
-  rather than thread based, and each process should run in isolation for the
-  sake of easy debugging, profiling, and troubleshooting.
-* **Resource constraints** --- Topologies should use only those resources
-  that they are initially allocated and never exceed those bounds. This makes
-  Heron safe to run in shared infrastructure.
-* **Compatibility** --- Heron is fully API and data model compatible with
-  [Apache Storm](http://storm.apache.org), making it easy for developers
-  to transition between systems.
-* **Back pressure** --- In a distributed system like Heron, there are no
-  guarantees that all system components will execute at the same speed. Heron
-  has built-in [back pressure mechanisms]({{< ref "#stream-manager" >}}) to ensure that
-  topologies can self-adjust in case components lag.
-* **Performance** --- Many of Heron's design choices have enabled Heron to
-  achieve higher throughput and lower latency than Storm while also offering
-  enhanced configurability to fine-tune potential latency/throughput trade-offs.
-* **Semantic guarantees** --- Heron provides support for both
-  [at-most-once and at-least-once](https://kafka.apache.org/08/design.html#semantics)
-  processing semantics.
-* **Efficiency** --- Heron was built with the goal of achieving all of the
-  above with the minimal possible resource usage.
+For a description of the principles that Heron was designed to fulfill, see
+[Heron Design Goals](/docs/concepts/design-goals).
 
 ## Topology Components
 
@@ -200,3 +181,66 @@ the [logical](../topologies#logical-plan) and
 [physical](../topologies#physical-plan) plan of each topology in your cluster.
 
 For more information, see the [Heron UI](../../operators/heron-ui) document.
+
+## Topology Submit Sequence
+
+[Topology Lifecycle](../topologies#topology-lifecycle) describes the lifecycle states of a Heron
+topology. The diagram below illustrates the sequence of interactions amongst the Heron architectural
+components during the `submit` and `deactivate` client actions. Additionally, the system interaction
+while viewing a topology on the Heron UI is shown.
+
+<!--
+The source for this diagram lives here:
+https://docs.google.com/drawings/d/10d1Q_VO0HFtOHftDV7kK6VbZMVI5EpEYHrD-LR7SczE
+-->
+<img src="/img/topology-submit-sequence-diagram.png" style="max-width:140%;!important;" alt="Topology Sequence Diagram"/>
+
+### Topology Submit Description
+
+The following describes in more detail how a topology is submitted and
+launched using local scheduler.
+
+* Client
+
+    When a topology is submitted using the `heron submit` command, it first executes
+    the `main` of the topology and creates a `.defn` file containing the topology's
+    logical plan. Then, it runs `com.twitter.heron.scheduler.SubmitterMain`, which
+    is responsible for invoking an uploader and a launcher for the topology.
+    The uploader uploads the topology package to the given location, while the
+    launcher registers the topology's logical plan and executor state with
+    the State Manager and invokes the main scheduler.
+
+* Shared Services
+
+    When the main scheduler (`com.twitter.heron.scheduler.SchedulerMain`) is invoked
+    by the launcher, it fetches the submitted topology artifact from the
+    topology storage, initializes the State Manager, and prepares a physical plan that
+    specifies how multiple instances should be packed into containers. Then, it starts
+    the specified scheduler, such as `com.twitter.heron.scheduler.local.LocalScheduler`,
+    which invokes the `heron-executor` for each container.
+
+* Topologies
+
+    `heron-executor` process is started for each container and is responsible for
+    executing the Topology Master or Heron Instances (Bolt/Spout) that are
+    assigned to the container. Note that the Topology Master is always executed
+    on container 0. When `heron-executor` executes normal Heron Instances
+    (i.e. except for container 0), it first prepares
+    the Stream Manager and the Metrics Manager before starting
+    `com.twitter.heron.instance.HeronInstance` for each instance that is
+    assigned to the container.
+    
+    Heron Instance has two threads: the gateway thread and the slave thread.
+    The gateway thread is mainly responsible for communicating with the Stream Manager
+    and the Metrics Manager using `StreamManagerClient` and `MetricsManagerClient`
+    respectively, as well as sending/receiving tuples to/from the slave
+    thread. On the other hand, the slave thread runs either spout or bolt
+    of the topology based on the physical plan.
+    
+    When a new Heron Instance is started, its `StreamManagerClient` establishes
+    a connection and registers itself with the stream manager.
+    After the successful registration, the gateway thread sends its physical plan to
+    the slave thread, which then executes the assigned instance accordingly.
+    
+
+

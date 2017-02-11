@@ -1,62 +1,32 @@
-java_test(
-    name = "handle_tmaster_location_unittest",
-    srcs = glob(["**/HandleTMasterLocationTest.java"]),
+load("/tools/rules/java_tests", "java_tests")
+
+java_library(
+    name = "metricsmgr-tests",
+    srcs = glob(["**/*.java"]),
     deps = [
-        "//heron/api/src/java:api-java", 
-        "//heron/common/src/java:common-java", 
-        "//heron/metricsmgr/src/java:metricsmgr-java", 
+        "//heron/api/src/java:api-java",
+        "//heron/common/src/java:common-java",
+        "//heron/metricsmgr/src/java:metricsmgr-java",
+        "//heron/spi/src/java:metricsmgr-spi-java",
         "//heron/proto:proto_common_java",
         "//heron/proto:proto_metrics_java",
         "//heron/proto:proto_tmaster_java",
-        "@protobuf-java//jar",
-        "@bazel_tools//third_party:mockito",
-        "@bazel_tools//third_party:junit4",
+        "@com_google_protobuf_protobuf_java//jar",
+        "//third_party/java:mockito",
+        "//third_party/java:junit4",
     ],
-    size = "small",
 )
 
-java_test(
-    name = "metrics_manager_server_unittest",
-    srcs = glob(["**/MetricsManagerServerTest.java"]),
-    deps = [
-        "//heron/api/src/java:api-java", 
-        "//heron/common/src/java:common-java", 
-        "//heron/spi/src/java:metricsmgr-spi-java", 
-        "//heron/metricsmgr/src/java:metricsmgr-java", 
-        "//heron/proto:proto_common_java",
-        "//heron/proto:proto_metrics_java", 
-        "@protobuf-java//jar",
-        "@bazel_tools//third_party:junit4",
+java_tests(
+    test_classes = [
+        "com.twitter.heron.metricsmgr.HandleTMasterLocationTest",
+        "com.twitter.heron.metricsmgr.MetricsManagerServerTest",
+        "com.twitter.heron.metricsmgr.executor.SinkExecutorTest",
+        "com.twitter.heron.metricsmgr.sink.tmaster.TMasterSinkTest",
+        "com.twitter.heron.metricsmgr.sink.FileSinkTest",
     ],
-    size = "small",
-)
-
-java_test(
-    name = "sink_executor_unittest",
-    srcs = glob(["**/SinkExecutorTest.java"]),
-    deps = [
-        "//heron/api/src/java:api-java", 
-        "//heron/common/src/java:common-java", 
-        "//heron/spi/src/java:metricsmgr-spi-java", 
-        "//heron/metricsmgr/src/java:metricsmgr-java", 
-        "//heron/proto:proto-java",
-        "@protobuf-java//jar",
-        "@bazel_tools//third_party:junit4",
-    ],
-    size = "small",
-)
-
-java_test(
-    name = "tmaster_sink_unittest",
-    srcs = glob(["**/TMasterSinkTest.java"]),
-    deps = [
-        "//heron/api/src/java:api-java", 
-        "//heron/common/src/java:common-java", 
-        "//heron/spi/src/java:metricsmgr-spi-java", 
-        "//heron/metricsmgr/src/java:metricsmgr-java", 
-        "//heron/proto:proto_tmaster_java",
-        "@protobuf-java//jar",
-        "@bazel_tools//third_party:junit4",
+    runtime_deps = [
+        ":metricsmgr-tests",
     ],
     size = "small",
 )

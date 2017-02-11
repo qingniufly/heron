@@ -29,8 +29,7 @@ import com.twitter.heron.proto.scheduler.Scheduler;
 import com.twitter.heron.proto.system.Common;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.common.Context;
-import com.twitter.heron.spi.common.PackingPlan;
-import com.twitter.heron.spi.common.ShellUtils;
+import com.twitter.heron.spi.packing.PackingPlan;
 import com.twitter.heron.spi.scheduler.IScheduler;
 import com.twitter.heron.spi.statemgr.SchedulerStateManagerAdaptor;
 
@@ -90,18 +89,6 @@ public final class SchedulerUtils {
       Config config,
       Config runtime,
       List<Integer> freePorts) {
-    // First let us have some safe checks
-    if (freePorts.size() < PORTS_REQUIRED_FOR_SCHEDULER) {
-      throw new RuntimeException("Failed to find enough ports for executor");
-    }
-    for (int port : freePorts) {
-      if (port == -1) {
-        throw new RuntimeException("Failed to find available ports for executor");
-      }
-    }
-
-    int httpPort = freePorts.get(0);
-
     List<String> commands = new ArrayList<>();
 
     // The java executable should be "{JAVA_HOME}/bin/java"
@@ -116,8 +103,38 @@ public final class SchedulerUtils {
         .append(Context.stateManagerSandboxClassPath(config))
         .toString();
     commands.add(completeSchedulerProcessClassPath);
-
     commands.add("com.twitter.heron.scheduler.SchedulerMain");
+
+    String[] commandArgs = schedulerCommandArgs(config, runtime, freePorts);
+    commands.addAll(Arrays.asList(commandArgs));
+
+    return commands.toArray(new String[0]);
+  }
+
+  /**
+   * Util method to get the arguments to the heron scheduler.
+   *
+   * @param config The static Config
+   * @param runtime The runtime Config
+   * @param freePorts list of free ports
+   * @return String[] representing the arguments to start heron-scheduler
+   */
+  public static String[] schedulerCommandArgs(
+      Config config, Config runtime, List<Integer> freePorts) {
+    // First let us have some safe checks
+    if (freePorts.size() < PORTS_REQUIRED_FOR_SCHEDULER) {
+      throw new RuntimeException("Failed to find enough ports for executor");
+    }
+    for (int port : freePorts) {
+      if (port == -1) {
+        throw new RuntimeException("Failed to find available ports for executor");
+      }
+    }
+
+    int httpPort = freePorts.get(0);
+
+    List<String> commands = new ArrayList<>();
+
     commands.add("--cluster");
     commands.add(Context.cluster(config));
     commands.add("--role");
@@ -162,6 +179,7 @@ public final class SchedulerUtils {
   /**
    * Util method to get the arguments to the heron executor. This method creates the arguments
    * without the container index, which is the first argument to the executor
+   *
    * @param config The static Config
    * @param runtime The runtime Config
    * @param freePorts list of free ports
@@ -204,8 +222,7 @@ public final class SchedulerUtils {
     commands.add(Integer.toString(tmasterControllerPort));
     commands.add(Integer.toString(tmasterStatsPort));
     commands.add(Context.systemConfigSandboxFile(config));
-    commands.add(TopologyUtils.formatRamMap(
-        TopologyUtils.getComponentRamMap(topology, Context.instanceRam(config))));
+    commands.add(Runtime.componentRamMap(runtime));
     commands.add(SchedulerUtils.encodeJavaOpts(TopologyUtils.getComponentJvmOptions(topology)));
     commands.add(Context.topologyPackageType(config));
     commands.add(Context.topologyJarFile(config));
@@ -250,6 +267,7 @@ public final class SchedulerUtils {
 
   /**
    * Set the location of scheduler for other processes to discover
+   *
    * @param runtime the runtime configuration
    * @param schedulerEndpoint the endpoint that scheduler listens for receives requests
    * @param scheduler the IScheduler to provide more info

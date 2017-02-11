@@ -29,7 +29,7 @@ public class FieldsGrouping extends Grouping {
     super(taskIds);
 
     for (int i = 0; i < schema.getKeysCount(); i++) {
-      for (int j = 0; i < inputStream.getGroupingFields().getKeysCount(); j++) {
+      for (int j = 0; j < inputStream.getGroupingFields().getKeysCount(); j++) {
         Boolean keysEqual = schema.getKeys(i).getKey().equals(
             inputStream.getGroupingFields().getKeys(j).getKey());
         if (keysEqual) {
@@ -47,12 +47,25 @@ public class FieldsGrouping extends Grouping {
     int taskIndex = 0;
     int primeNumber = 633910111;
     for (Integer indices : fieldsGroupingIndices) {
-      taskIndex += Math.abs(tuple.getValues(indices).hashCode()) % primeNumber;
+      taskIndex += getHashCode(tuple.getValues(indices)) % primeNumber;
     }
 
     taskIndex = taskIndex % taskIds.size();
+    // Make sure taskIndex is greater than 0
+    taskIndex = taskIndex >= 0 ? taskIndex : taskIndex + taskIds.size();
     res.add(taskIds.get(taskIndex));
 
     return res;
+  }
+
+  /**
+   * Returns a hash code value for the given Object,
+   * basing on customized hash method.
+   *
+   * @param o the given
+   * @return the hash code of the Object
+   */
+  protected int getHashCode(Object o) {
+    return o.hashCode();
   }
 }

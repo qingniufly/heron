@@ -1,20 +1,25 @@
-
+load("/tools/rules/java_tests", "java_tests")
 load("/tools/rules/heron_deps", "heron_java_proto_files")
 
 common_deps_files = [
     "//heron/common/src/java:basics-java",
     "//heron/common/src/java:config-java",
     "//heron/spi/src/java:common-spi-java",
-    "//3rdparty/java:powermock",
-    "@bazel_tools//third_party:junit4",
-    "@bazel_tools//third_party:mockito",
+    "//third_party/java:powermock",
+    "//third_party/java:junit4",
+    "//third_party/java:mockito",
 ]
 
 util_deps_files = \
     common_deps_files + [
         "//heron/spi/src/java:utils-spi-java", 
     ]
-    
+
+packing_deps_files = \
+    common_deps_files + [
+        "//heron/spi/src/java:packing-spi-java",
+    ]
+
 proto_deps_files = \
     heron_java_proto_files() + \
     util_deps_files
@@ -24,123 +29,65 @@ api_deps_files = proto_deps_files + [
 ]
 
 java_library(
-    name = "test-utils-java",
-    srcs = glob([
-        "**/TestConstants.java",
-    ]),
+    name = "utils-tests",
+    srcs = glob(["**/utils/*.java"]),
+    deps = api_deps_files
 )
 
-java_test(
-    name = "shell-utils_unittest",
-    srcs = glob(["**/common/ShellUtilsTest.java"]),
-    deps = common_deps_files, 
+java_tests(
+    test_classes = [
+        "com.twitter.heron.spi.utils.ShellUtilsTest",
+        "com.twitter.heron.spi.utils.NetworkUtilsTest",
+        "com.twitter.heron.spi.utils.SchedulerUtilsTest",
+        "com.twitter.heron.spi.utils.TopologyUtilsTest",
+        "com.twitter.heron.spi.utils.UploaderUtilsTest",
+    ],
+    runtime_deps = [ ":utils-tests" ],
     size = "small",
 )
 
 java_test(
-    name = "packing-plan_unittest",
-    srcs = glob(["**/common/PackingPlanTest.java"]),
+    name = "PackingPlanTest",
+    srcs = glob(["**/packing/PackingPlanTest.java"]),
+    deps = packing_deps_files,
+    size = "small",
+)
+
+java_library(
+    name = "metrics-tests",
+    srcs = glob(["**/metrics/*.java"]),
+    deps = [
+        "//heron/spi/src/java:metricsmgr-spi-java",
+        "//third_party/java:junit4",
+    ],
+)
+
+java_tests(
+    test_classes = [
+        "com.twitter.heron.spi.metricsmgr.metrics.ExceptionInfoTest",
+        "com.twitter.heron.spi.metricsmgr.metrics.MetricsInfoTest",
+        "com.twitter.heron.spi.metricsmgr.metrics.MetricsRecordTest",
+    ],
+    runtime_deps = [ ":metrics-tests" ],
+    size = "small",
+)
+
+java_library(
+    name = "common-tests",
+    srcs = glob(["**/common/*.java"]),
     deps = common_deps_files,
-    size = "small",
 )
 
-java_test(
-    name = "network-utils_unittest",
-    srcs = glob(["**/common/NetworkUtilsTest.java"]),
-    deps = common_deps_files,
-    size = "small",
-)
-
-java_test(
-    name = "scheduler-utils_unittest",
-    srcs = glob(["**/utils/SchedulerUtilsTest.java"]),
-    deps = proto_deps_files, 
-    size = "small",
-)
-
-java_test(
-    name = "topology-utils_unittest",
-    srcs = glob(["**/utils/TopologyUtilsTest.java"]),
-    deps = api_deps_files, 
-    size = "small",
-)
-
-java_test(
-    name = "exception-info_unittest",
-    srcs = glob(["**/ExceptionInfoTest.java"]),
-    deps = [
-        "//heron/spi/src/java:metricsmgr-spi-java", 
-        "@bazel_tools//third_party:junit4",
+java_tests(
+    test_classes = [
+        "com.twitter.heron.spi.common.ConfigKeysTest",
+        "com.twitter.heron.spi.common.ConfigDefaultsTest",
+        "com.twitter.heron.spi.common.ConfigKeysDefaultsTest",
+        "com.twitter.heron.spi.common.MiscTest",
+        "com.twitter.heron.spi.common.ClusterDefaultsTest",
+        "com.twitter.heron.spi.common.ClusterConfigTest",
     ],
-    size = "small",
-)
-
-java_test(
-    name = "metrics-info_unittest",
-    srcs = glob(["**/MetricsInfoTest.java"]),
-    deps = [
-        "//heron/spi/src/java:metricsmgr-spi-java", 
-        "@bazel_tools//third_party:junit4",
-    ],
-    size = "small",
-)
-
-java_test(
-    name = "metrics-record_unittest",
-    srcs = glob(["**/MetricsRecordTest.java"]),
-    deps = [
-        "//heron/spi/src/java:metricsmgr-spi-java", 
-        "@bazel_tools//third_party:junit4",
-    ],
-    size = "small",
-)
-
-java_test(
-    name = "config-keys_unittest",
-    srcs = glob(["**/ConfigKeysTest.java"]),
-    deps = [":test-utils-java"] + common_deps_files,
-    size = "small",
-)
-
-java_test(
-    name = "config-defaults_unittest",
-    srcs = glob(["**/ConfigDefaultsTest.java"]),
-    deps = [":test-utils-java"] + common_deps_files,
-    size = "small",
-)
-
-java_test(
-    name = "config-keys-defaults_unittest",
-    srcs = glob(["**/ConfigKeysDefaultsTest.java"]),
-    deps = [":test-utils-java"] + common_deps_files,
-    size = "small",
-)
-
-java_test(
-    name = "misc_unittest",
-    srcs = glob(["**/MiscTest.java"]),
-    deps = [":test-utils-java"] + common_deps_files,
-    size = "small",
-)
-
-java_test(
-    name = "cluster-defaults_unittest",
-    srcs = glob(["**/ClusterDefaultsTest.java"]),
-    deps = [":test-utils-java"] + common_deps_files,
-    size = "small",
-)
-
-java_test(
-    name = "cluster-config_unittest",
-    srcs = glob(["**/ClusterConfigTest.java"]),
-    deps = [":test-utils-java"] + common_deps_files,
+    runtime_deps = [ ":common-tests" ],
     data = glob(["**/testdata/**/*.yaml"]),
-    size = "small",
-)
-
-java_test(
-    name = "uploader-utils_unittest",
-    srcs = glob(["**/utils/UploaderUtilsTest.java"]),
-    deps = util_deps_files,
     size = "small",
 )

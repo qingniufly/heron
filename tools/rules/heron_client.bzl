@@ -4,6 +4,7 @@
 def heron_client_bin_files():
     return [
         "//heron/cli/src/python:heron",
+        "//heron/explorer/src/python:heron-explorer",
     ]
 
 def heron_client_conf_files():
@@ -21,18 +22,28 @@ def heron_client_aurora_files():
         "//heron/config/src/yaml:conf-aurora-yaml",
     ]
 
+def heron_client_yarn_files():
+    return [
+        "//heron/config/src/yaml:conf-yarn-yaml",
+    ]
+
 def heron_client_lib_scheduler_files():
     return [
         "//heron/scheduler-core/src/java:heron-scheduler",
         "//heron/schedulers/src/java:heron-local-scheduler",
         "//heron/schedulers/src/java:heron-aurora-scheduler",
         "//heron/schedulers/src/java:heron-slurm-scheduler",
+        "//heron/schedulers/src/java:heron-yarn-scheduler",
+        "//heron/schedulers/src/java:heron-mesos-scheduler",
         "//heron/packing/src/java:heron-roundrobin-packing",
+	"//heron/packing/src/java:heron-binpacking-packing",
     ]
 
 def heron_client_lib_packing_files():
     return [
         "//heron/packing/src/java:heron-roundrobin-packing",
+        "//heron/packing/src/java:heron-binpacking-packing",
+
     ]
 
 def heron_client_lib_statemgr_files():
@@ -47,12 +58,12 @@ def heron_client_lib_uploader_files():
         "//heron/uploaders/src/java:heron-localfs-uploader",
         "//heron/uploaders/src/java:heron-s3-uploader",
         "//heron/uploaders/src/java:heron-hdfs-uploader",
+        "//heron/uploaders/src/java:heron-scp-uploader",
     ]
 
-def heron_client_lib_3rdparty_files():
+def heron_client_lib_third_party_files():
     return [
-        "@protobuf-java//jar",
-        "@slf4j-api//jar",
-        "@slf4j-jdk//jar",
-        "@log4j-over-slf4j//jar",
+        "@com_google_protobuf_protobuf_java//jar",
+        "@org_slf4j_slf4j_api//jar",
+        "@org_slf4j_slf4j_jdk14//jar",
     ]

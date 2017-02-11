@@ -30,7 +30,9 @@ import com.twitter.heron.proto.scheduler.Scheduler;
 import com.twitter.heron.spi.common.Config;
 import com.twitter.heron.spi.common.Context;
 import com.twitter.heron.spi.common.Misc;
-import com.twitter.heron.spi.common.PackingPlan;
+import com.twitter.heron.spi.packing.PackingPlan;
+import com.twitter.heron.spi.packing.PackingPlan.ContainerPlan;
+import com.twitter.heron.spi.packing.PackingPlan.Resource;
 import com.twitter.heron.spi.scheduler.IScheduler;
 import com.twitter.heron.spi.utils.Runtime;
 import com.twitter.heron.spi.utils.TopologyUtils;
@@ -128,15 +130,17 @@ public class AuroraScheduler implements IScheduler {
 
     TopologyAPI.Topology topology = Runtime.topology(runtime);
 
-    PackingPlan.Resource containerResource =
-        packing.containers.values().iterator().next().resource;
+    // Align the ram to the maximal one
+    PackingPlan.Resource containerResource = getMaxRequiredResource(packing);
+    // Update total topology resource requirement on Aurora clusters
+    packing.resource.ram = containerResource.ram * (packing.containers.size() + 1);
 
     auroraProperties.put("SANDBOX_EXECUTOR_BINARY", Context.executorSandboxBinary(config));
     auroraProperties.put("TOPOLOGY_NAME", topology.getName());
     auroraProperties.put("TOPOLOGY_ID", topology.getId());
     auroraProperties.put("TOPOLOGY_DEFINITION_FILE",
         FileUtils.getBaseName(Context.topologyDefinitionFile(config)));
-    auroraProperties.put("INSTANCE_DISTRIBUTION", packing.getInstanceDistribution());
+    auroraProperties.put("INSTANCE_DISTRIBUTION", Runtime.instanceDistribution(runtime));
     auroraProperties.put("STATEMGR_CONNECTION_STRING",
         Context.stateManagerConnectionString(config));
     auroraProperties.put("STATEMGR_ROOT_PATH", Context.stateManagerRootPath(config));
@@ -150,9 +154,7 @@ public class AuroraScheduler implements IScheduler {
         TopologyUtils.makeClassPath(topology, Context.topologyJarFile(config)));
 
     auroraProperties.put("SANDBOX_SYSTEM_YAML", Context.systemConfigSandboxFile(config));
-    auroraProperties.put("COMPONENT_RAMMAP",
-        TopologyUtils.formatRamMap(
-            TopologyUtils.getComponentRamMap(topology, Context.instanceRam(config))));
+    auroraProperties.put("COMPONENT_RAMMAP", Runtime.componentRamMap(runtime));
     auroraProperties.put("COMPONENT_JVM_OPTS_IN_BASE64",
         formatJavaOpts(TopologyUtils.getComponentJvmOptions(topology)));
     auroraProperties.put("TOPOLOGY_PACKAGE_TYPE", Context.topologyPackageType(config));
@@ -190,6 +192,22 @@ public class AuroraScheduler implements IScheduler {
     auroraProperties.put("TOPOLOGY_PACKAGE_URI", topologyPkgURI);
 
     return auroraProperties;
+  }
+
+  /**
+   * This method finds the container with highest resource requirement and returns the resource.
+   * Currently only RAM is used for max identification.
+   */
+  private Resource getMaxRequiredResource(PackingPlan packingPlan) {
+    Resource maxResource = packingPlan.containers.values().iterator().next().resource;
+    for (ContainerPlan entry : packingPlan.containers.values()) {
+      Resource resource = entry.resource;
+      if (maxResource.ram < resource.ram) {
+        maxResource = resource;
+      }
+    }
+
+    return maxResource;
   }
 
   protected boolean isProduction() {
